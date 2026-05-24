@@ -571,6 +571,20 @@ a {
 .alias__row + .alias__row {
   margin-top: var(--s-2);
 }
+
+/* Inline form error message — sits inside dialogs, under the inputs. */
+.form-error {
+  margin: var(--s-3) 0 0;
+  padding: 8px 12px;
+  border-radius: var(--r-2);
+  background: hsl(0 84% 64% / 0.12);
+  border: 1px solid hsl(0 84% 64% / 0.4);
+  color: hsl(0 84% 78%);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.form-error[hidden] { display: none; }
+
 .alias__actions {
   display: flex; gap: var(--s-2); justify-content: flex-end;
   margin-top: var(--s-4);
