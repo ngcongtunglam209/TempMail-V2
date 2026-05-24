@@ -4,15 +4,15 @@ Single-server Linux deployment with **two domains**:
 
 | Domain                     | Role                                                   |
 | -------------------------- | ------------------------------------------------------ |
-| `a.bond` (example webmail) | Webmail UI users visit                                 |
+| `yunaalways.bond`          | Webmail UI users visit                                 |
 | `vietkieu.edu.pl`          | Where mail addresses live (e.g. `random@vietkieu.edu.pl`) |
 
 Targets Debian 12+ or Ubuntu 22.04+.
 
 ## What you'll have when this is done
 
-- Frontend at `https://a.bond` (and `https://www.a.bond`)
-- API at `https://api.a.bond`
+- Frontend at `https://yunaalways.bond` (and `https://www.yunaalways.bond`)
+- API at `https://api.yunaalways.bond`
 - Inbound SMTP on `mail.vietkieu.edu.pl:25`
 - TLS via Let's Encrypt (auto-renewed by Caddy)
 - API + SMTP managed by `systemd` as a single unit (`lammail.service`)
@@ -20,7 +20,7 @@ Targets Debian 12+ or Ubuntu 22.04+.
 
 > The webmail domain and the mail domain are **independent**. The webmail
 > domain has no MX records; the mail domain has no webmail records. Pick any
-> short domain you own for the webmail side; this guide uses `a.bond` as the
+> short domain you own for the webmail side; this guide uses `yunaalways.bond` as the
 > example.
 
 ## Prerequisites
@@ -35,11 +35,11 @@ Targets Debian 12+ or Ubuntu 22.04+.
 Add these at your registrars **before** running the installer (so Caddy can
 issue certs on first boot).
 
-### Webmail domain — `a.bond`
+### Webmail domain — `yunaalways.bond`
 
 | Name           | Type | Value     |
 | -------------- | ---- | --------- |
-| `a.bond` (apex) | A   | SERVER_IP |
+| `yunaalways.bond` (apex) | A   | SERVER_IP |
 | `www`          | A    | SERVER_IP |
 | `api`          | A    | SERVER_IP |
 
@@ -65,13 +65,13 @@ No MX records. The webmail domain never receives mail.
 
 ## Configure for your real domains
 
-The repo ships configured for `a.bond` (webmail) and `vietkieu.edu.pl` (mail).
+The repo ships configured for `yunaalways.bond` (webmail) and `vietkieu.edu.pl` (mail).
 If your webmail domain is something else, edit two files **before** running
 the installer:
 
-1. `deploy/Caddyfile` — replace `a.bond` and `api.a.bond` with your real
+1. `deploy/Caddyfile` — replace `yunaalways.bond` and `api.yunaalways.bond` with your real
    webmail hostnames.
-2. `deploy/install.sh` — change `CORS_ORIGINS=https://a.bond,...` to match.
+2. `deploy/install.sh` — change `CORS_ORIGINS=https://yunaalways.bond,...` to match.
 
 ## Install
 
@@ -96,10 +96,10 @@ The installer will:
 
 ```bash
 # API is up
-curl -s https://api.a.bond/v1/health | jq
+curl -s https://api.yunaalways.bond/v1/health | jq
 
 # Webmail is up
-curl -sI https://a.bond/ | head -n1
+curl -sI https://yunaalways.bond/ | head -n1
 
 # SMTP banner (should show LamMail ESMTP)
 nc -v mail.vietkieu.edu.pl 25 < /dev/null
@@ -109,7 +109,7 @@ sudo journalctl -u lammail -f
 ```
 
 Then send a real email from Gmail to `<random>@vietkieu.edu.pl` (an address
-you generated through the UI on `a.bond`). It should appear in the inbox
+you generated through the UI on `yunaalways.bond`). It should appear in the inbox
 within a few seconds.
 
 ## Update
@@ -127,7 +127,7 @@ sudo systemctl reload caddy
 
 **Caddy keeps trying to issue a cert and failing**
 DNS isn't pointing at the server yet, or port 80 is blocked. Run
-`dig a.bond` and `dig api.a.bond` to confirm A records resolve to your
+`dig yunaalways.bond` and `dig api.yunaalways.bond` to confirm A records resolve to your
 server IP. Make sure UFW shows 80 and 443 allowed.
 
 **Mail to my address never arrives**
@@ -137,7 +137,7 @@ Run `sudo ufw status verbose` to confirm.
 
 **Browser can't reach the API (CORS error)**
 The API's `CORS_ORIGINS` in `apps/api/.env` must include your real webmail
-origin (`https://a.bond`). Edit and `sudo systemctl restart lammail`.
+origin (`https://yunaalways.bond`). Edit and `sudo systemctl restart lammail`.
 
 **Node can't bind port 25**
 The systemd unit grants `CAP_NET_BIND_SERVICE` so the `lammail` user can bind

@@ -1,16 +1,16 @@
 # LamMail Caddyfile — install at /etc/caddy/Caddyfile
 # Webmail lives on one domain, mail addresses live on another.
 #
-#   - Webmail UI:  https://a.bond              (replace with your real webmail domain)
-#   - API:         https://api.a.bond
+#   - Webmail UI:  https://yunaalways.bond
+#   - API:         https://api.yunaalways.bond
 #   - Mail in:     vietkieu.edu.pl  MX 10 mail.vietkieu.edu.pl  (port 25)
 
 {
-        email admin@a.bond
+        email admin@yunaalways.bond
 }
 
 # ─── Webmail UI ─────────────────────────────────────────────────────────
-a.bond, www.a.bond {
+yunaalways.bond, www.yunaalways.bond {
         root * /opt/lammail/app/apps/web/dist
         encode zstd gzip
         try_files {path} /index.html
@@ -22,13 +22,13 @@ a.bond, www.a.bond {
                 X-Frame-Options DENY
                 Referrer-Policy strict-origin-when-cross-origin
                 Permissions-Policy "interest-cohort=()"
-                Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.a.bond; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+                Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.yunaalways.bond; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
                 -Server
         }
 }
 
 # ─── API ────────────────────────────────────────────────────────────────
-api.a.bond {
+api.yunaalways.bond {
         encode zstd gzip
         @api path /v1/*
         reverse_proxy @api 127.0.0.1:3001
