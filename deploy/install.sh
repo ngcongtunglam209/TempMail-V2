@@ -109,7 +109,7 @@ SMTP_MAX_SIZE_BYTES=5242880
 DB_PATH=/opt/lammail/data/mail.db
 
 # Webmail lives on a separate domain (CORS allowlist).
-CORS_ORIGINS=https://yunaalways.bond,https://www.yunaalways.bond
+CORS_ORIGINS=https://yunaalways.cyou,https://www.yunaalways.cyou
 
 RATE_LIMIT_MAX_PER_MINUTE=120
 RATE_LIMIT_CREATE_PER_MINUTE=10
@@ -144,9 +144,9 @@ echo "Next steps:"
 echo "  1. Add DNS records at your registrars:"
 echo ""
 echo "     # Webmail domain (the URL users visit)"
-echo "     yunaalways.bond        A     <SERVER_IP>"
-echo "     www.yunaalways.bond    A     <SERVER_IP>"
-echo "     api.yunaalways.bond    A     <SERVER_IP>"
+echo "     yunaalways.cyou        A     <SERVER_IP>"
+echo "     www.yunaalways.cyou    A     <SERVER_IP>"
+echo "     api.yunaalways.cyou    A     <SERVER_IP>"
 echo ""
 echo "     # Mail domain (where addresses live)"
 echo "     mail.vietkieu.edu.pl  A     <SERVER_IP>"

@@ -1,7 +1,11 @@
 // LamMail web — API client
 // Wraps the /v1 surface. Token is set per-call by the store.
 
-const BASE = '/v1';
+// In dev (Vite), VITE_API_BASE is unset and we use a relative path so the
+// Vite proxy forwards /v1 to the local API on :3001.
+// In prod, set VITE_API_BASE to the public API origin (e.g. https://api.example.com).
+const RAW_BASE = (import.meta.env?.VITE_API_BASE || '').replace(/\/+$/, '');
+const BASE = `${RAW_BASE}/v1`;
 
 class ApiError extends Error {
   constructor(message, status, body) {
