@@ -1,0 +1,20 @@
+{
+  "name": "lammail",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LamMail — self-hosted ephemeral disposable email service.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace apps/api",
+    "dev:web": "npm run dev --workspace apps/web",
+    "build:web": "npm run build --workspace apps/web",
+    "start:api": "npm run start --workspace apps/api"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

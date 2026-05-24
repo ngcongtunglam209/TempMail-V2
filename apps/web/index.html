@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0f1a" />
+    <meta name="description" content="LamMail — disposable email addresses on your own domain. No accounts, no logs." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>LamMail — Disposable Email</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand__logo" aria-hidden="true">L</span>
+        <span class="brand__name">LamMail</span>
+        <span class="brand__tag" data-i18n="header.tagline">Disposable email on your domain</span>
+      </div>
+
+      <div class="topbar__actions">
+        <button class="btn btn--ghost" id="palette-btn" data-i18n-attr="aria-label:palette.open" aria-label="Open command palette">
+          <span class="kbd">Ctrl</span><span class="kbd">K</span>
+        </button>
+        <button class="btn btn--ghost" id="lang-btn" aria-label="Switch language">EN</button>
+        <button class="btn btn--ghost" id="theme-btn" aria-label="Toggle theme">
+          <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="addressbar card">
+        <div class="addressbar__row">
+          <div class="addressbar__email">
+            <span class="status-dot" id="status-dot" data-status="loading" aria-hidden="true"></span>
+            <input
+              id="address-input"
+              type="text"
+              readonly
+              placeholder="Generating…"
+              aria-label="Your temporary email address"
+            />
+            <button class="btn btn--icon" id="copy-btn" data-i18n-attr="title:actions.copy" title="Copy">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+          <div class="addressbar__meta">
+            <span class="chip" id="ttl-chip" aria-label="Time remaining">--:--</span>
+          </div>
+        </div>
+
+        <div class="addressbar__row addressbar__row--actions">
+          <button class="btn btn--primary" id="new-btn" data-i18n="actions.new">New address</button>
+          <button class="btn" id="claim-btn" data-i18n="actions.claim">Claim alias</button>
+          <button class="btn" id="refresh-btn" data-i18n="actions.refresh">Refresh</button>
+          <label class="auto">
+            <input type="checkbox" id="auto-toggle" />
+            <span data-i18n="actions.auto">Auto</span>
+            <select id="auto-interval" aria-label="Auto-refresh interval">
+              <option value="10">10s</option>
+              <option value="30" selected>30s</option>
+              <option value="60">1m</option>
+              <option value="120">2m</option>
+            </select>
+          </label>
+          <button class="btn btn--danger" id="delete-mb-btn" data-i18n="actions.deleteMailbox">Delete mailbox</button>
+        </div>
+
+        <nav class="tabs" id="tabs" aria-label="Mailbox tabs"></nav>
+      </section>
+
+      <section class="inbox card">
+        <header class="inbox__head">
+          <h2 class="inbox__title">
+            <span data-i18n="inbox.title">Inbox</span>
+            <span class="badge" id="inbox-count">0</span>
+          </h2>
+          <div class="inbox__filters">
+            <input class="search" id="search" type="search" placeholder="Search…" data-i18n-attr="placeholder:inbox.search" />
+            <div class="chips" role="tablist">
+              <button class="chip chip--active" data-filter="all" data-i18n="filter.all">All</button>
+              <button class="chip" data-filter="starred" data-i18n="filter.starred">Starred</button>
+              <button class="chip" data-filter="verification" data-i18n="filter.verification">Verifications</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="inbox__list" id="inbox-list" role="list">
+          <div class="empty" id="inbox-empty">
+            <div class="empty__icon">📭</div>
+            <div class="empty__title" data-i18n="empty.title">No emails yet</div>
+            <div class="empty__hint" data-i18n="empty.hint">Send a message to your address — it'll show up here.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Email viewer modal -->
+    <dialog id="viewer" class="viewer">
+      <header class="viewer__head">
+        <div class="viewer__meta">
+          <h3 id="viewer-subject"></h3>
+          <div class="viewer__from"><span id="viewer-from"></span> · <time id="viewer-date"></time></div>
+        </div>
+        <div class="viewer__actions">
+          <button class="btn btn--icon" id="viewer-toggle-images" title="Toggle remote images">🖼️</button>
+          <button class="btn btn--icon" id="viewer-eml" title="Download as .eml">⬇</button>
+          <button class="btn btn--icon btn--danger" id="viewer-delete" title="Delete">🗑</button>
+          <button class="btn btn--icon" id="viewer-close" title="Close">✕</button>
+        </div>
+      </header>
+      <iframe id="viewer-frame" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
+    </dialog>
+
+    <!-- Command palette -->
+    <dialog id="palette" class="palette">
+      <input id="palette-input" class="palette__input" type="text" placeholder="Type a command…" autocomplete="off" />
+      <ul id="palette-list" class="palette__list"></ul>
+    </dialog>
+
+    <!-- Claim alias dialog -->
+    <dialog id="alias-dialog" class="alias">
+      <form id="alias-form" method="dialog">
+        <header class="alias__head">
+          <h3 data-i18n="alias.title">Claim a custom alias</h3>
+          <button type="button" class="btn btn--icon" id="alias-close" title="Close">✕</button>
+        </header>
+        <p class="alias__hint" data-i18n="alias.hint">Pick the part before the @. 3-32 letters, digits, dot, dash, underscore.</p>
+        <div class="alias__row">
+          <input
+            id="alias-input"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="a.bond"
+            pattern="[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])?"
+            minlength="3"
+            maxlength="32"
+            required
+          />
+          <span class="alias__suffix" id="alias-suffix">@vietkieu.edu.pl</span>
+        </div>
+        <div class="alias__actions">
+          <button type="button" class="btn" id="alias-cancel" data-i18n="alias.cancel">Cancel</button>
+          <button type="submit" class="btn btn--primary" id="alias-submit" data-i18n="alias.submit">Claim</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Toasts -->
+    <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

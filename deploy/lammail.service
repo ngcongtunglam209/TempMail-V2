@@ -1,0 +1,43 @@
+[Unit]
+Description=LamMail API and SMTP receiver
+Documentation=https://github.com/yourname/lammail
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lammail
+Group=lammail
+WorkingDirectory=/opt/lammail/app/apps/api
+EnvironmentFile=/opt/lammail/app/apps/api/.env
+ExecStart=/usr/bin/node /opt/lammail/app/apps/api/src/server.js
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lammail
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+ReadWritePaths=/opt/lammail/data /opt/lammail/app/apps/api
+
+# Allow binding to port 25 / 80 / 443 even though we run as a non-root user.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
