@@ -13,6 +13,8 @@ import healthRoutes from './routes/health.js';
 import domainRoutes from './routes/domains.js';
 import mailboxRoutes from './routes/mailboxes.js';
 import messageRoutes from './routes/messages.js';
+import unlockRoutes from './routes/unlock.js';
+import adminRoutes from './routes/admin.js';
 
 async function build() {
   const app = Fastify({
@@ -56,6 +58,8 @@ async function build() {
   await app.register(domainRoutes);
   await app.register(mailboxRoutes);
   await app.register(messageRoutes);
+  await app.register(unlockRoutes);
+  await app.register(adminRoutes);
 
   app.setNotFoundHandler((req, reply) => {
     reply.code(404).send({ error: 'Not found', path: req.url });
@@ -102,6 +106,11 @@ async function main() {
     app.log.info(
       `LamMail API ${CONFIG.version} (provider=${CONFIG.provider}, domain=${CONFIG.mailDomain})`,
     );
+    if (!CONFIG.adminToken) {
+      app.log.warn(
+        'ADMIN_TOKEN is not set — admin endpoints are disabled. Set ADMIN_TOKEN in .env to enable mailbox creation.',
+      );
+    }
   } catch (err) {
     app.log.error({ err }, 'failed to start');
     process.exit(1);

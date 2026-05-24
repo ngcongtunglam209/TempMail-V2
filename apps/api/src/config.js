@@ -59,7 +59,14 @@ const CONFIG = Object.freeze({
   rateLimit: Object.freeze({
     maxPerMinute: int(env.RATE_LIMIT_MAX_PER_MINUTE, 120),
     createPerMinute: int(env.RATE_LIMIT_CREATE_PER_MINUTE, 10),
+    unlockPerMinute: int(env.RATE_LIMIT_UNLOCK_PER_MINUTE, 5),
   }),
+
+  adminToken: env.ADMIN_TOKEN || null,
+
+  // Session token TTL issued on /v1/unlock (in seconds). Mailboxes themselves
+  // are persistent for admin-created entries.
+  sessionTtlSeconds: int(env.SESSION_TTL_SECONDS, 7 * 24 * 3600),
 
   version: '0.1.0',
 });

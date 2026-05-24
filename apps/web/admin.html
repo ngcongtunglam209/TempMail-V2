@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0f1a" />
+    <meta name="description" content="LamMail — admin console" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>LamMail · Admin</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand__logo" aria-hidden="true">L</span>
+        <span class="brand__name">LamMail</span>
+        <span class="brand__tag">Admin console</span>
+      </div>
+      <div class="topbar__actions">
+        <a class="btn btn--ghost" href="/">← Visitor app</a>
+        <button class="btn" id="admin-signout" hidden>Sign out</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- Login form (shown until ADMIN_TOKEN is supplied) -->
+      <section class="card" id="admin-login">
+        <h2 style="margin-top:0">Sign in</h2>
+        <p style="color:var(--c-text-3); margin-top:0">
+          Paste the <code>ADMIN_TOKEN</code> configured on the API server.
+          Stored only in <code>sessionStorage</code> for this tab.
+        </p>
+        <form id="admin-login-form" class="alias__row" autocomplete="off">
+          <input
+            type="password"
+            id="admin-token-input"
+            placeholder="ADMIN_TOKEN"
+            autocomplete="off"
+            spellcheck="false"
+            required
+            style="flex:1"
+          />
+          <button type="submit" class="btn btn--primary" style="border-radius:0">Unlock</button>
+        </form>
+      </section>
+
+      <!-- Create mailbox -->
+      <section class="card" id="admin-create" hidden>
+        <h2 style="margin-top:0">Create mailbox</h2>
+        <form id="admin-create-form" autocomplete="off">
+          <div class="alias__row">
+            <input
+              id="admin-localPart"
+              type="text"
+              placeholder="local part (e.g. alice) — leave blank for random"
+              pattern="[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])?"
+              minlength="3"
+              maxlength="32"
+            />
+            <span class="alias__suffix" id="admin-suffix">@vietkieu.edu.pl</span>
+          </div>
+          <div class="alias__row">
+            <input
+              id="admin-passcode"
+              type="text"
+              placeholder="passcode (4-128 chars) or leave blank to generate"
+              minlength="4"
+              maxlength="128"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button type="button" id="admin-passcode-gen" class="btn" style="border-radius:0">Generate</button>
+          </div>
+          <div class="alias__actions">
+            <button type="submit" class="btn btn--primary">Create</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Mailbox list -->
+      <section class="card" id="admin-list-card" hidden>
+        <header class="inbox__head">
+          <h2 class="inbox__title">
+            <span>Mailboxes</span>
+            <span class="badge" id="admin-count">0</span>
+          </h2>
+          <div class="inbox__filters">
+            <button class="btn" id="admin-refresh">Refresh</button>
+          </div>
+        </header>
+        <div class="inbox__list" id="admin-list" role="list"></div>
+      </section>
+    </main>
+
+    <!-- Toasts -->
+    <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+    <script type="module" src="/src/admin.js"></script>
+  </body>
+</html>

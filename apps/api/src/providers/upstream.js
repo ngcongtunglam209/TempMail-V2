@@ -9,7 +9,8 @@ const stub = (name) => async () => {
 
 export default {
   name: 'upstream',
-  createMailbox: stub('createMailbox'),
+  createAdminMailbox: stub('createAdminMailbox'),
+  unlockMailbox: stub('unlockMailbox'),
   getMailboxByToken: stub('getMailboxByToken'),
   listMessages: stub('listMessages'),
   getMessage: stub('getMessage'),
@@ -17,6 +18,9 @@ export default {
   deleteMessage: stub('deleteMessage'),
   deleteAllMessages: stub('deleteAllMessages'),
   deleteMailbox: stub('deleteMailbox'),
+  listMailboxesAdmin: stub('listMailboxesAdmin'),
+  deleteMailboxByAddress: stub('deleteMailboxByAddress'),
+  setPasscode: stub('setPasscode'),
   domains: stub('domains'),
   isAddressActive: async () => false,
 };

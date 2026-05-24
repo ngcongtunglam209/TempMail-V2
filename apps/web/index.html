@@ -49,8 +49,7 @@
         </div>
 
         <div class="addressbar__row addressbar__row--actions">
-          <button class="btn btn--primary" id="new-btn" data-i18n="actions.new">New address</button>
-          <button class="btn" id="claim-btn" data-i18n="actions.claim">Claim alias</button>
+          <button class="btn btn--primary" id="unlock-btn" data-i18n="actions.unlock">Unlock mailbox</button>
           <button class="btn" id="refresh-btn" data-i18n="actions.refresh">Refresh</button>
           <label class="auto">
             <input type="checkbox" id="auto-toggle" />
@@ -62,7 +61,7 @@
               <option value="120">2m</option>
             </select>
           </label>
-          <button class="btn btn--danger" id="delete-mb-btn" data-i18n="actions.deleteMailbox">Delete mailbox</button>
+          <button class="btn" id="signout-btn" data-i18n="actions.signout">Sign out</button>
         </div>
 
         <nav class="tabs" id="tabs" aria-label="Mailbox tabs"></nav>
@@ -115,6 +114,43 @@
     <dialog id="palette" class="palette">
       <input id="palette-input" class="palette__input" type="text" placeholder="Type a command…" autocomplete="off" />
       <ul id="palette-list" class="palette__list"></ul>
+    </dialog>
+
+    <!-- Unlock mailbox dialog -->
+    <dialog id="unlock-dialog" class="alias">
+      <form id="unlock-form" method="dialog">
+        <header class="alias__head">
+          <h3 data-i18n="unlock.title">Unlock your mailbox</h3>
+          <button type="button" class="btn btn--icon" id="unlock-close" title="Close">✕</button>
+        </header>
+        <p class="alias__hint" data-i18n="unlock.hint">Enter the address and passcode the admin gave you.</p>
+        <div class="alias__row">
+          <input
+            id="unlock-address"
+            type="email"
+            autocomplete="email"
+            spellcheck="false"
+            placeholder="you@vietkieu.edu.pl"
+            required
+          />
+        </div>
+        <div class="alias__row">
+          <input
+            id="unlock-passcode"
+            type="password"
+            autocomplete="current-password"
+            spellcheck="false"
+            placeholder="passcode"
+            minlength="4"
+            maxlength="128"
+            required
+          />
+        </div>
+        <div class="alias__actions">
+          <button type="button" class="btn" id="unlock-cancel" data-i18n="unlock.cancel">Cancel</button>
+          <button type="submit" class="btn btn--primary" id="unlock-submit" data-i18n="unlock.submit">Unlock</button>
+        </div>
+      </form>
     </dialog>
 
     <!-- Claim alias dialog -->

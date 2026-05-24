@@ -13,6 +13,14 @@
 yunaalways.cyou, www.yunaalways.cyou {
         root * /opt/lammail/app/apps/web/dist
         encode zstd gzip
+
+        # Serve the admin SPA at /admin and /admin/* without falling through to index.html.
+        @admin path /admin /admin/*
+        handle @admin {
+                try_files {path} /admin.html
+                file_server
+        }
+
         try_files {path} /index.html
         file_server
 
@@ -30,8 +38,14 @@ yunaalways.cyou, www.yunaalways.cyou {
 # ─── API ────────────────────────────────────────────────────────────────
 api.yunaalways.cyou {
         encode zstd gzip
-        @api path /v1/*
-        reverse_proxy @api 127.0.0.1:3001
+
+        handle /v1/* {
+                reverse_proxy 127.0.0.1:3001
+        }
+
+        handle {
+                respond 404
+        }
 
         header {
                 Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -39,6 +53,4 @@ api.yunaalways.cyou {
                 Referrer-Policy no-referrer
                 -Server
         }
-
-        respond 404
 }

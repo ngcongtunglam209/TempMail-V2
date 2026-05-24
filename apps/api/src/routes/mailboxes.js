@@ -4,34 +4,11 @@ import provider from '../providers/index.js';
 import { requireMailbox } from './_auth.js';
 
 export default async function mailboxRoutes(app) {
-  // Create a mailbox. Public, with a stricter dedicated rate limit.
-  app.post('/v1/mailboxes', {
-    config: {
-      rateLimit: {
-        max: app.lammailLimits?.create ?? 10,
-        timeWindow: '1 minute',
-      },
-    },
-    schema: {
-      body: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          localPart: { type: 'string', minLength: 3, maxLength: 32 },
-          domain: { type: 'string', minLength: 3, maxLength: 64 },
-        },
-      },
-    },
-  }, async (req, reply) => {
-    try {
-      const result = await provider.createMailbox(req.body || {});
-      reply.code(201);
-      return result;
-    } catch (err) {
-      const code = err.statusCode || 500;
-      reply.code(code);
-      return { error: err.message || 'Failed to create mailbox' };
-    }
+  // Public mailbox creation is disabled. Admin creates mailboxes via
+  // /v1/admin/mailboxes; visitors unlock them via /v1/unlock.
+  app.post('/v1/mailboxes', async (req, reply) => {
+    reply.code(403);
+    return { error: 'Mailbox creation is admin-only. Use /v1/unlock with an issued passcode.' };
   });
 
   // Get current mailbox info. Requires bearer token.
@@ -40,6 +17,7 @@ export default async function mailboxRoutes(app) {
       address: req.mailbox.address,
       createdAt: req.mailbox.createdAt,
       expiresAt: req.mailbox.expiresAt,
+      persistent: req.mailbox.persistent,
       count: req.mailbox.count,
     };
   });

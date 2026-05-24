@@ -1,9 +1,7 @@
 // LamMail web — multi-mailbox tabs
 
 import { store, MAX_MAILBOXES } from '../store.js';
-import { api } from '../apiClient.js';
 import { t } from './i18n.js';
-import { toast } from './toast.js';
 
 function shortAddr(addr) {
   if (!addr) return 'mailbox';
@@ -21,7 +19,9 @@ function render() {
     </button>
   `).join('');
   const canAdd = sessions.length < MAX_MAILBOXES;
-  tabs.innerHTML = items + (canAdd ? `<button class="tab tab--add" data-add="1">+ New</button>` : '');
+  tabs.innerHTML =
+    items +
+    (canAdd ? `<button class="tab tab--add" data-add="1">+ ${t('actions.unlock')}</button>` : '');
 }
 
 export function bindTabs({ onChanged } = {}) {
@@ -31,28 +31,18 @@ export function bindTabs({ onChanged } = {}) {
     if (close) {
       e.stopPropagation();
       const idx = Number(close.dataset.close);
-      const session = store.get().sessions[idx];
-      if (session) {
-        try {
-          await api.deleteMailbox(session.token);
-        } catch {
-          /* ignore */
-        }
-        store.removeSession(idx);
-        onChanged?.();
-      }
+      // Closing a tab signs the device out of that mailbox (drops the local
+      // session token) but does NOT delete the admin-owned mailbox itself.
+      store.removeSession(idx);
+      onChanged?.();
       return;
     }
     const add = e.target.closest('[data-add]');
     if (add) {
-      try {
-        const result = await api.createMailbox({});
-        store.addSession(result);
-        toast(t('toast.created'), 'success');
-        onChanged?.();
-      } catch (err) {
-        toast(err.code === 'LIMIT' ? t('toast.maxTabs') : t('toast.network'), 'error');
-      }
+      // Opening another mailbox requires another unlock.
+      const dlg = document.getElementById('unlock-dialog');
+      if (dlg && !dlg.open) dlg.showModal();
+      setTimeout(() => document.getElementById('unlock-address')?.focus(), 0);
       return;
     }
     const tab = e.target.closest('[data-index]');

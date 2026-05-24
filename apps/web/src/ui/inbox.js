@@ -147,7 +147,9 @@ export async function refreshInbox({ silent = false } = {}) {
       // session expired; drop it
       const i = store.get().activeIndex;
       if (i >= 0) store.removeSession(i);
-      toast('Session expired', 'error');
+      toast(t('session.expired'), 'error');
+      const dlg = document.getElementById('unlock-dialog');
+      if (dlg && !dlg.open && !store.active()) dlg.showModal();
     } else if (!silent) {
       toast(t('toast.network'), 'error');
     }

@@ -11,8 +11,10 @@ function purge() {
   const db = getDb();
   const now = Math.floor(Date.now() / 1000);
 
+  // Persistent mailboxes (admin-created with a passcode) are exempt from
+  // TTL purging; admin removes them explicitly via /v1/admin/mailboxes.
   const expiredMailboxes = db
-    .prepare(`DELETE FROM mailboxes WHERE expires_at <= ?`)
+    .prepare(`DELETE FROM mailboxes WHERE persistent = 0 AND expires_at <= ?`)
     .run(now);
 
   // Some messages may have a shorter TTL than the mailbox in future; clean those too.
@@ -20,10 +22,20 @@ function purge() {
     .prepare(`DELETE FROM messages WHERE expires_at <= ?`)
     .run(now);
 
-  if (expiredMailboxes.changes || expiredMessages.changes) {
+  // Drop session tokens whose own TTL has lapsed.
+  const expiredTokens = db
+    .prepare(`DELETE FROM mailbox_tokens WHERE expires_at <= ?`)
+    .run(now);
+
+  if (
+    expiredMailboxes.changes ||
+    expiredMessages.changes ||
+    expiredTokens.changes
+  ) {
     return {
       mailboxes: expiredMailboxes.changes,
       messages: expiredMessages.changes,
+      tokens: expiredTokens.changes,
     };
   }
   return null;

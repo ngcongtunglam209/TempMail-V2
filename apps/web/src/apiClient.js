@@ -49,8 +49,9 @@ export const api = {
   health: () => request('/health'),
   domains: () => request('/domains'),
 
-  createMailbox: (opts = {}) =>
-    request('/mailboxes', { method: 'POST', body: opts }),
+  // Visitor: exchange (address, passcode) for a session token.
+  unlock: ({ address, passcode }) =>
+    request('/unlock', { method: 'POST', body: { address, passcode } }),
 
   me: (token) => request('/mailboxes/me', { token }),
 
@@ -71,6 +72,23 @@ export const api = {
     `${BASE}/messages/${encodeURIComponent(msgId)}/attachments/${encodeURIComponent(
       attId,
     )}?token=${encodeURIComponent(token)}`,
+
+  admin: {
+    list: (adminToken) => request('/admin/mailboxes', { token: adminToken }),
+    create: (adminToken, body) =>
+      request('/admin/mailboxes', { method: 'POST', token: adminToken, body }),
+    delete: (adminToken, address) =>
+      request(`/admin/mailboxes/${encodeURIComponent(address)}`, {
+        method: 'DELETE',
+        token: adminToken,
+      }),
+    rotate: (adminToken, address, passcode) =>
+      request(`/admin/mailboxes/${encodeURIComponent(address)}`, {
+        method: 'PATCH',
+        token: adminToken,
+        body: { passcode },
+      }),
+  },
 };
 
 export { ApiError };
