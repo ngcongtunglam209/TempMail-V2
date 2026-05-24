@@ -14,15 +14,19 @@ yunaalways.cyou, www.yunaalways.cyou {
         root * /opt/lammail/app/apps/web/dist
         encode zstd gzip
 
-        # Serve the admin SPA at /admin and /admin/* without falling through to index.html.
+        # Admin SPA — must come first. Without an explicit handle block the
+        # bare try_files below would rewrite /admin to /index.html.
         @admin path /admin /admin/*
         handle @admin {
                 try_files {path} /admin.html
                 file_server
         }
 
-        try_files {path} /index.html
-        file_server
+        # Visitor SPA — everything else.
+        handle {
+                try_files {path} /index.html
+                file_server
+        }
 
         header {
                 Strict-Transport-Security "max-age=31536000; includeSubDomains"
