@@ -49,6 +49,19 @@ function migrate(database) {
       `ALTER TABLE mailboxes ADD COLUMN persistent INTEGER NOT NULL DEFAULT 0`,
     );
   }
+
+  // api_keys is created by schema.sql for fresh installs; older DBs need it explicitly.
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id            TEXT PRIMARY KEY,
+      key_hash      TEXT NOT NULL UNIQUE,
+      label         TEXT,
+      created_at    INTEGER NOT NULL,
+      last_used_at  INTEGER,
+      revoked_at    INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+  `);
 }
 
 export function closeDb() {

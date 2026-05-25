@@ -88,6 +88,15 @@ export const api = {
         token: adminToken,
         body: { passcode },
       }),
+    listKeys: (adminToken) =>
+      request('/admin/api-keys', { token: adminToken }),
+    createKey: (adminToken, label) =>
+      request('/admin/api-keys', { method: 'POST', token: adminToken, body: { label } }),
+    revokeKey: (adminToken, id) =>
+      request(`/admin/api-keys/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        token: adminToken,
+      }),
   },
 };
 

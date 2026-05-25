@@ -44,7 +44,10 @@ api.yunaalways.cyou {
         encode zstd gzip
 
         handle /v1/* {
-                reverse_proxy 127.0.0.1:3001
+                reverse_proxy 127.0.0.1:3001 {
+                        # Stream SSE without buffering on /v1/api/.../stream.
+                        flush_interval -1
+                }
         }
 
         handle {

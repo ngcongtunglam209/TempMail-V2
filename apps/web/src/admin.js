@@ -29,6 +29,7 @@ function showSignedIn(signedIn) {
   document.getElementById('admin-login').hidden = signedIn;
   document.getElementById('admin-create').hidden = !signedIn;
   document.getElementById('admin-list-card').hidden = !signedIn;
+  document.getElementById('admin-keys-card').hidden = !signedIn;
   document.getElementById('admin-signout').hidden = !signedIn;
 }
 
@@ -174,7 +175,7 @@ async function signIn(e) {
     await api.admin.list(value);
     showSignedIn(true);
     document.getElementById('admin-token-input').value = '';
-    await loadList();
+    await Promise.all([loadList(), loadKeys()]);
   } catch (err) {
     setToken('');
     if (err instanceof ApiError && err.status === 503) {
@@ -190,6 +191,96 @@ function signOut() {
   showSignedIn(false);
 }
 
+async function loadKeys() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const { keys } = await api.admin.listKeys(token);
+    document.getElementById('admin-keys-count').textContent = String(keys.length);
+    const list = document.getElementById('admin-keys-list');
+    if (!keys.length) {
+      list.innerHTML = `<div class="empty"><div class="empty__title">No API keys</div><div class="empty__hint">Issue one above to let scripts use /v1/api/*.</div></div>`;
+      return;
+    }
+    list.innerHTML = keys
+      .map((k) => {
+        const status = k.revokedAt
+          ? `<span class="tag tag--security">revoked</span>`
+          : `<span class="tag tag--verification">active</span>`;
+        const last = k.lastUsedAt
+          ? `last used ${escape(new Date(k.lastUsedAt).toLocaleString())}`
+          : 'never used';
+        return `
+          <div class="row" data-key-id="${escape(k.id)}">
+            <div class="avatar" style="background:linear-gradient(135deg,#22D3EE,#10B981)" aria-hidden="true">K</div>
+            <div class="row__main">
+              <div class="row__head">
+                <span class="row__from">${escape(k.label || 'unlabeled')}</span>
+                ${status}
+              </div>
+              <div class="row__preview">
+                <code style="font-size:11.5px">${escape(k.id)}</code>
+                · created ${escape(new Date(k.createdAt).toLocaleString())}
+                · ${last}
+              </div>
+            </div>
+            <div class="row__side" style="gap:6px">
+              ${k.revokedAt ? '' : '<button class="btn btn--danger" data-action="revoke">Revoke</button>'}
+            </div>
+          </div>`;
+      })
+      .join('');
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      toast('Token rejected', 'error');
+      setToken('');
+      showSignedIn(false);
+    } else {
+      toast('Could not load API keys', 'error');
+    }
+  }
+}
+
+async function issueKey(e) {
+  e.preventDefault();
+  const token = getToken();
+  if (!token) return;
+  const label = document.getElementById('admin-key-label').value.trim();
+  try {
+    const result = await api.admin.createKey(token, label || undefined);
+    document.getElementById('admin-key-label').value = '';
+    const reveal = document.getElementById('admin-key-reveal');
+    reveal.hidden = false;
+    reveal.innerHTML = `
+      <div style="margin-bottom:6px"><strong>New API key</strong> — copy now, it won't be shown again.</div>
+      <code style="display:block; word-break:break-all; font-size:12.5px">${escape(result.key)}</code>
+    `;
+    toast('Key issued', 'success');
+    await loadKeys();
+  } catch (err) {
+    if (err instanceof ApiError) toast(err.message || `Error ${err.status}`, 'error');
+    else toast('Network error', 'error');
+  }
+}
+
+async function keyAction(e) {
+  const btn = e.target.closest('[data-action="revoke"]');
+  if (!btn) return;
+  const row = btn.closest('[data-key-id]');
+  if (!row) return;
+  const id = row.dataset.keyId;
+  const token = getToken();
+  if (!token) return;
+  if (!confirm(`Revoke key ${id}? Scripts using it will start getting 401s.`)) return;
+  try {
+    await api.admin.revokeKey(token, id);
+    toast('Revoked', 'success');
+    await loadKeys();
+  } catch {
+    toast('Revoke failed', 'error');
+  }
+}
+
 function main() {
   document.getElementById('admin-login-form').addEventListener('submit', signIn);
   document.getElementById('admin-create-form').addEventListener('submit', createMailbox);
@@ -199,11 +290,15 @@ function main() {
   document.getElementById('admin-refresh').addEventListener('click', loadList);
   document.getElementById('admin-list').addEventListener('click', rowAction);
   document.getElementById('admin-signout').addEventListener('click', signOut);
+  document.getElementById('admin-keys-form').addEventListener('submit', issueKey);
+  document.getElementById('admin-keys-refresh').addEventListener('click', loadKeys);
+  document.getElementById('admin-keys-list').addEventListener('click', keyAction);
 
   loadDomain();
   if (getToken()) {
     showSignedIn(true);
     loadList();
+    loadKeys();
   } else {
     showSignedIn(false);
   }

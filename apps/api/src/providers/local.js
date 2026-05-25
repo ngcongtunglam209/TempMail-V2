@@ -10,6 +10,8 @@ import {
 import { hashPasscode, verifyPasscode } from '../lib/passcode.js';
 import { newLocalPart, isValidLocalPart, newMessageId, newAttachmentId } from '../lib/id.js';
 import { sanitizeHtml, makePreview } from '../lib/sanitize.js';
+import events from '../lib/events.js';
+import crypto from 'node:crypto';
 import CONFIG from '../config.js';
 
 function stripTags(html) {
@@ -303,6 +305,168 @@ export default {
     return tx() > 0;
   },
 
+  // ── API key management ──────────────────────────────────────────────
+  // Admin issues keys; scripts authenticate to /v1/api/* with them. The
+  // plaintext key is returned ONCE on creation; only the sha256 hash persists.
+
+  async createApiKey({ label } = {}) {
+    const id = crypto.randomBytes(8).toString('hex');
+    const secret = crypto.randomBytes(32).toString('base64url');
+    const key = `lk_${secret}`;
+    const keyHash = crypto.createHash('sha256').update(key).digest('hex');
+    const created = nowSec();
+    const db = getDb();
+    db.prepare(
+      `INSERT INTO api_keys (id, key_hash, label, created_at)
+       VALUES (?, ?, ?, ?)`,
+    ).run(id, keyHash, label || null, created);
+    return { id, key, label: label || null, createdAt: toMs(created) };
+  },
+
+  async listApiKeys() {
+    const db = getDb();
+    return db
+      .prepare(
+        `SELECT id, label, created_at, last_used_at, revoked_at
+           FROM api_keys
+          ORDER BY created_at DESC`,
+      )
+      .all()
+      .map((r) => ({
+        id: r.id,
+        label: r.label,
+        createdAt: toMs(r.created_at),
+        lastUsedAt: r.last_used_at ? toMs(r.last_used_at) : null,
+        revokedAt: r.revoked_at ? toMs(r.revoked_at) : null,
+      }));
+  },
+
+  async revokeApiKey(id) {
+    if (!id) return false;
+    const db = getDb();
+    const result = db
+      .prepare(
+        `UPDATE api_keys SET revoked_at = ?
+          WHERE id = ? AND revoked_at IS NULL`,
+      )
+      .run(nowSec(), id);
+    return result.changes > 0;
+  },
+
+  // Hash the plaintext key, look up an active row, bump last_used_at, and
+  // return a small descriptor for the request context. Returns null on miss
+  // so the route layer responds with a uniform 401.
+  async findApiKeyByPlaintext(key) {
+    if (!key || typeof key !== 'string') return null;
+    const keyHash = crypto.createHash('sha256').update(key).digest('hex');
+    const db = getDb();
+    const row = db
+      .prepare(
+        `SELECT id, label FROM api_keys
+          WHERE key_hash = ? AND revoked_at IS NULL`,
+      )
+      .get(keyHash);
+    if (!row) return null;
+    db.prepare(`UPDATE api_keys SET last_used_at = ? WHERE id = ?`).run(
+      nowSec(),
+      row.id,
+    );
+    return { id: row.id, label: row.label };
+  },
+
+  // ── Mailbox helpers used by /v1/api/* ───────────────────────────────
+
+  // Create a TTL-bound mailbox without a passcode. Used by API key holders
+  // who want disposable inboxes for automated tests, signups, etc.
+  async createTtlMailbox({ localPart, domain, ttlSeconds } = {}) {
+    const useDomain = domain || CONFIG.mailDomain;
+    if (!CONFIG.allowedDomains.includes(useDomain)) {
+      const err = new Error('Domain not allowed');
+      err.statusCode = 400;
+      throw err;
+    }
+    let part = localPart;
+    if (part) {
+      if (!isValidLocalPart(part)) {
+        const err = new Error('Invalid localPart');
+        err.statusCode = 400;
+        throw err;
+      }
+      part = part.toLowerCase();
+    } else {
+      part = newLocalPart();
+    }
+
+    let ttl = Number.isFinite(ttlSeconds) ? Math.floor(ttlSeconds) : CONFIG.mailboxTtlSeconds;
+    if (ttl < 60) ttl = 60;
+    if (ttl > 7 * 24 * 3600) ttl = 7 * 24 * 3600;
+
+    const address = `${part}@${useDomain}`;
+    const created = nowSec();
+    const expires = created + ttl;
+    const db = getDb();
+    try {
+      db.prepare(
+        `INSERT INTO mailboxes
+           (address, token_hash, created_at, expires_at,
+            passcode_hash, passcode_salt, persistent)
+         VALUES (?, NULL, ?, ?, NULL, NULL, 0)`,
+      ).run(address, created, expires);
+    } catch (e) {
+      if (String(e.message).includes('UNIQUE')) {
+        const err = new Error('Address already taken');
+        err.statusCode = 409;
+        throw err;
+      }
+      throw e;
+    }
+    return { address, createdAt: toMs(created), expiresAt: toMs(expires) };
+  },
+
+  // Combined list of every mailbox (admin-created + api-created). Scripts
+  // need this so they can read inbound mail for shared admin mailboxes too.
+  async listAllMailboxes() {
+    const db = getDb();
+    return db
+      .prepare(
+        `SELECT m.address, m.created_at, m.expires_at, m.persistent,
+                (SELECT COUNT(*) FROM messages WHERE address = m.address) AS count
+           FROM mailboxes m
+          ORDER BY m.created_at DESC`,
+      )
+      .all()
+      .map((r) => ({
+        address: r.address,
+        createdAt: toMs(r.created_at),
+        expiresAt: toMs(r.expires_at),
+        persistent: Boolean(r.persistent),
+        messageCount: r.count,
+      }));
+  },
+
+  // Resolve an address to a mailbox descriptor for the /v1/api/* tree.
+  // listMessages/getMessage/etc. take this object and key off `.address`.
+  async getMailboxByAddress(address) {
+    if (!address) return null;
+    const lower = String(address).toLowerCase();
+    const db = getDb();
+    const row = db
+      .prepare(
+        `SELECT address, created_at, expires_at, persistent
+           FROM mailboxes
+          WHERE address = ?
+            AND (persistent = 1 OR expires_at > ?)`,
+      )
+      .get(lower, nowSec());
+    if (!row) return null;
+    return {
+      address: row.address,
+      createdAt: toMs(row.created_at),
+      expiresAt: toMs(row.expires_at),
+      persistent: Boolean(row.persistent),
+    };
+  },
+
   async domains() {
     return CONFIG.allowedDomains.map((d) => ({ domain: d, isActive: true }));
   },
@@ -380,6 +544,20 @@ export default {
       }
     });
     tx();
+
+    // Notify SSE subscribers. The summary shape mirrors listMessages so
+    // clients don't need a follow-up round trip.
+    events.emit('message', {
+      address: mailbox.address,
+      id,
+      from: fromObj.address || null,
+      fromName: fromObj.name || null,
+      subject: parsed.subject || null,
+      preview: makePreview(parsed.text || stripTags(parsed.html || '')),
+      receivedAt: toMs(nowSec()),
+      hasAttachments: (parsed.attachments || []).some((a) => a.content),
+    });
+
     return id;
   },
 };

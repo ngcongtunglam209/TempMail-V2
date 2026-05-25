@@ -15,6 +15,8 @@ import mailboxRoutes from './routes/mailboxes.js';
 import messageRoutes from './routes/messages.js';
 import unlockRoutes from './routes/unlock.js';
 import adminRoutes from './routes/admin.js';
+import adminApiKeyRoutes from './routes/adminApiKeys.js';
+import apiPublicRoutes from './routes/apiPublic.js';
 
 async function build() {
   const app = Fastify({
@@ -60,6 +62,8 @@ async function build() {
   await app.register(messageRoutes);
   await app.register(unlockRoutes);
   await app.register(adminRoutes);
+  await app.register(adminApiKeyRoutes);
+  await app.register(apiPublicRoutes);
 
   app.setNotFoundHandler((req, reply) => {
     reply.code(404).send({ error: 'Not found', path: req.url });
