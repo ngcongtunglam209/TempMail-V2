@@ -11,11 +11,24 @@
 // Rate limiting is disabled here (rateLimit: false) per the design: keys are
 // already issued by trusted admins.
 
+import crypto from 'node:crypto';
+
 import provider from '../providers/index.js';
 import { requireApiKey } from '../lib/apiKeyAuth.js';
+import { isValidPasscode } from '../lib/passcode.js';
 import events from '../lib/events.js';
 
 const SSE_PING_MS = 25_000;
+
+// Default passcode generator. Mixed-case letters + digits, 12 chars.
+// Removes ambiguous chars (0/O, 1/l) so the passcode is easy to read aloud.
+function generatePasscode(len = 12) {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.randomBytes(len);
+  let out = '';
+  for (let i = 0; i < len; i += 1) out += alphabet[bytes[i] % alphabet.length];
+  return out;
+}
 
 async function loadMailbox(req, reply) {
   const mailbox = await provider.getMailboxByAddress(req.params.address);
@@ -40,14 +53,33 @@ export default async function apiPublicRoutes(app) {
             localPart: { type: 'string', minLength: 3, maxLength: 32 },
             domain: { type: 'string', minLength: 3, maxLength: 64 },
             ttlSeconds: { type: 'integer', minimum: 60, maximum: 7 * 24 * 3600 },
+            // Optional: when set, the mailbox can be unlocked by a visitor at
+            // POST /v1/unlock with (address, passcode). Omit to keep it
+            // API-key-only.
+            passcode: { type: 'string', minLength: 4, maxLength: 128 },
           },
         },
       },
     },
     async (req, reply) => {
+      const body = { ...(req.body || {}) };
+      if (body.passcode) {
+        if (!isValidPasscode(body.passcode)) {
+          reply.code(400);
+          return { error: 'Passcode must be 4-128 printable ASCII characters' };
+        }
+      } else {
+        // Auto-generate so every API-created mailbox is visitor-unlockable
+        // by default. Caller can opt out with `"passcode": null`-style
+        // sentinel — but we treat unset as "please generate".
+        body.passcode = generatePasscode();
+      }
       try {
-        const result = await provider.createTtlMailbox(req.body || {});
+        const result = await provider.createTtlMailbox(body);
         reply.code(201);
+        // Echo plaintext passcode back so the caller can hand it to a visitor.
+        // Server stores only the scrypt hash + salt.
+        result.passcode = body.passcode;
         return result;
       } catch (err) {
         const code = err.statusCode || 500;

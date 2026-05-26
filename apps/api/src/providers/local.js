@@ -376,9 +376,10 @@ export default {
 
   // ── Mailbox helpers used by /v1/api/* ───────────────────────────────
 
-  // Create a TTL-bound mailbox without a passcode. Used by API key holders
-  // who want disposable inboxes for automated tests, signups, etc.
-  async createTtlMailbox({ localPart, domain, ttlSeconds } = {}) {
+  // Create a TTL-bound mailbox. If `passcode` is provided, the mailbox can
+  // also be unlocked by a visitor via /v1/unlock just like an admin mailbox.
+  // Without a passcode the mailbox is API-key-only.
+  async createTtlMailbox({ localPart, domain, ttlSeconds, passcode } = {}) {
     const useDomain = domain || CONFIG.mailDomain;
     if (!CONFIG.allowedDomains.includes(useDomain)) {
       const err = new Error('Domain not allowed');
@@ -401,6 +402,14 @@ export default {
     if (ttl < 60) ttl = 60;
     if (ttl > 7 * 24 * 3600) ttl = 7 * 24 * 3600;
 
+    let passHash = null;
+    let passSalt = null;
+    if (passcode) {
+      const { salt, hash } = hashPasscode(passcode);
+      passHash = hash;
+      passSalt = salt;
+    }
+
     const address = `${part}@${useDomain}`;
     const created = nowSec();
     const expires = created + ttl;
@@ -410,8 +419,8 @@ export default {
         `INSERT INTO mailboxes
            (address, token_hash, created_at, expires_at,
             passcode_hash, passcode_salt, persistent)
-         VALUES (?, NULL, ?, ?, NULL, NULL, 0)`,
-      ).run(address, created, expires);
+         VALUES (?, NULL, ?, ?, ?, ?, 0)`,
+      ).run(address, created, expires, passHash, passSalt);
     } catch (e) {
       if (String(e.message).includes('UNIQUE')) {
         const err = new Error('Address already taken');
@@ -420,7 +429,12 @@ export default {
       }
       throw e;
     }
-    return { address, createdAt: toMs(created), expiresAt: toMs(expires) };
+    return {
+      address,
+      createdAt: toMs(created),
+      expiresAt: toMs(expires),
+      hasPasscode: Boolean(passcode),
+    };
   },
 
   // Combined list of every mailbox (admin-created + api-created). Scripts

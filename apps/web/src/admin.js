@@ -102,25 +102,72 @@ async function createMailbox(e) {
   e.preventDefault();
   const token = getToken();
   if (!token) return;
+  const errEl = document.getElementById('admin-create-error');
+  const revealEl = document.getElementById('admin-create-reveal');
+  errEl.hidden = true;
+  errEl.textContent = '';
+  revealEl.hidden = true;
+  revealEl.innerHTML = '';
+
   const localPart = document.getElementById('admin-localPart').value.trim().toLowerCase();
   let passcode = document.getElementById('admin-passcode').value;
   if (!passcode) {
     passcode = generatePasscode();
     document.getElementById('admin-passcode').value = passcode;
   }
+
+  // Match the server-side regex up front so the user gets a clear error
+  // instead of a generic 400.
+  if (localPart && !/^[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])?$/.test(localPart)) {
+    errEl.hidden = false;
+    errEl.textContent =
+      'Local part must be 3-32 chars: letters, digits, dot, dash, underscore. Must start and end with a letter or digit.';
+    return;
+  }
+  if (passcode.length < 4 || passcode.length > 128) {
+    errEl.hidden = false;
+    errEl.textContent = 'Passcode must be 4-128 characters.';
+    return;
+  }
+
   try {
     const body = { passcode };
     if (localPart) body.localPart = localPart;
     const result = await api.admin.create(token, body);
+    revealEl.hidden = false;
+    revealEl.innerHTML = `
+      <div style="margin-bottom:6px"><strong>Mailbox created</strong> — share these with the visitor.</div>
+      <div style="display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font:12.5px ui-monospace, monospace; align-items:center">
+        <span style="opacity:0.7">address</span>
+        <code style="word-break:break-all">${escape(result.address)}</code>
+        <span style="opacity:0.7">passcode</span>
+        <code style="word-break:break-all">${escape(result.passcode)}</code>
+      </div>
+      <div style="margin-top:6px">
+        <button type="button" class="btn" data-copy="${escape(result.address)}|${escape(result.passcode)}">Copy address + passcode</button>
+      </div>
+    `;
+    const copyBtn = revealEl.querySelector('[data-copy]');
+    copyBtn?.addEventListener('click', async () => {
+      const [addr, pc] = copyBtn.dataset.copy.split('|');
+      try {
+        await navigator.clipboard.writeText(`${addr}\n${pc}`);
+        toast('Copied', 'success');
+      } catch {
+        toast('Could not copy', 'error');
+      }
+    });
     toast(`Created ${result.address}`, 'success');
     document.getElementById('admin-localPart').value = '';
-    // Keep the passcode visible so the admin can copy it.
+    document.getElementById('admin-passcode').value = '';
     await loadList();
   } catch (err) {
     if (err instanceof ApiError) {
-      toast(err.message || `Error ${err.status}`, 'error');
+      errEl.hidden = false;
+      errEl.textContent = err.message || `Error ${err.status}`;
     } else {
-      toast('Network error', 'error');
+      errEl.hidden = false;
+      errEl.textContent = 'Network error';
     }
   }
 }

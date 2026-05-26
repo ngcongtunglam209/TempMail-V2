@@ -70,6 +70,19 @@ Endpoints (all under `/v1/api/`, all require an API key):
 | DELETE | `/mailboxes/:address/messages/:id`| delete one message            |
 | GET    | `/mailboxes/:address/stream`      | SSE stream of inbound mail    |
 
+`POST /v1/api/mailboxes` always returns a `passcode` so the mailbox can also
+be unlocked by a visitor at `/`. Pass your own `passcode` in the body to set
+it, or omit it and the server auto-generates one (12 chars, mixed case +
+digits, no ambiguous characters).
+
+```bash
+curl -s "$API/v1/api/mailboxes" -H "X-Api-Key: $KEY" \
+  -H 'content-type: application/json' \
+  -d '{"localPart":"alice","ttlSeconds":3600}'
+# -> {"address":"alice@vietkieu.edu.pl","createdAt":...,"expiresAt":...,
+#     "hasPasscode":true,"passcode":"K7mPq2RxNpAa"}
+```
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
